@@ -1,0 +1,73 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums para status fixos
+enum Role {
+  USER
+  ADMIN
+}
+
+enum ContestStatus {
+  OPEN     // Aberto para apostas
+  DRAWING  // Sorteio em andamento (bloqueia apostas)
+  FINISHED // Finalizado
+}
+
+// Modelo de Usuário
+model User {
+  id        String   @id @default(cuid())
+  name      String?
+  username  String   @unique
+  password  String   // Será armazenada como hash
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  bets      Bet[]    // Relacionamento com as apostas
+
+  @@map("users")
+}
+
+// Modelo de Concurso (Sorteio)
+model Contest {
+  id           String        @id @default(cuid())
+  number       Int           @unique
+  prizeValue   Decimal       @db.Decimal(10, 2)
+  drawDate     DateTime
+  status       ContestStatus @default(OPEN)
+  drawnNumbers Int[]
+  
+  // ADICIONE ESTA LINHA:
+  maxNumbers   Int           @default(30) // Padrão 30 para compatibilidade
+
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  bets         Bet[]
+
+  @@map("contests")
+}
+
+// Modelo de Aposta (Bilhete)
+model Bet {
+  id              String   @id @default(cuid())
+  selectedNumbers Int[]    // Array que aceita 6, 7... até 30 números (Desdobramento)
+  hits            Int      @default(0) // Quantidade de acertos (calculado após sorteio)
+  createdAt       DateTime @default(now())
+  
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  
+  contestId       String
+  contest         Contest  @relation(fields: [contestId], references: [id])
+
+  @@map("bets")
+}
