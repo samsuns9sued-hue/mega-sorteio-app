@@ -170,25 +170,40 @@ export default function AdminPage() {
             </div>
 
             <div className="bg-slate-900 rounded-xl overflow-hidden border border-slate-800">
-              <table className="w-full text-left">
-                <thead className="bg-slate-950 text-gray-400">
-                  <tr><th className="p-4">#</th><th className="p-4">Status</th><th className="p-4">Max. Dezenas</th><th className="p-4">Prêmio</th><th className="p-4 text-right">Ações</th></tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800">
-                  {contests.map(c => (
-                    <tr key={c.id} className="hover:bg-slate-800/50">
-                      <td className="p-4 font-bold">#{c.number}</td>
-                      <td className="p-4"><span className={`px-2 py-1 rounded text-xs ${c.status === 'OPEN' ? 'bg-green-900 text-green-200' : 'bg-gray-700 text-gray-300'}`}>{c.status}</span></td>
-                      <td className="p-4 text-center text-gray-300">{c.maxNumbers}</td>
-                      <td className="p-4 text-green-400">{Number(c.prizeValue).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
-                      <td className="p-4 text-right space-x-3">
-                        <button onClick={() => openDetails(c.id)} className="text-blue-400 hover:text-blue-300 font-bold text-sm">Ver Detalhes</button>
-                        <button onClick={() => handleDelete(c.id)} className="text-red-400 hover:text-red-300 text-sm">Excluir</button>
-                      </td>
+              {/* ADICIONEI ESTA DIV ABAIXO PARA ROLAGEM LATERAL NO CELULAR */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-left min-w-[600px]"> {/* Adicionei min-w para garantir largura mínima */}
+                  <thead className="bg-slate-950 text-gray-400">
+                    <tr>
+                      <th className="p-4 whitespace-nowrap">#</th>
+                      <th className="p-4 whitespace-nowrap">Status</th>
+                      <th className="p-4 whitespace-nowrap">Max. Dezenas</th>
+                      <th className="p-4 whitespace-nowrap">Prêmio</th>
+                      <th className="p-4 text-right whitespace-nowrap">Ações</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800">
+                    {contests.map(c => (
+                      <tr key={c.id} className="hover:bg-slate-800/50">
+                        <td className="p-4 font-bold">#{c.number}</td>
+                        <td className="p-4">
+                          <span className={`px-2 py-1 rounded text-xs whitespace-nowrap ${c.status === 'OPEN' ? 'bg-green-900 text-green-200' : 'bg-gray-700 text-gray-300'}`}>
+                            {c.status}
+                          </span>
+                        </td>
+                        <td className="p-4 text-center text-gray-300">{c.maxNumbers}</td>
+                        <td className="p-4 text-green-400 whitespace-nowrap">
+                          {Number(c.prizeValue).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        </td>
+                        <td className="p-4 text-right space-x-3 whitespace-nowrap">
+                          <button onClick={() => openDetails(c.id)} className="text-blue-400 hover:text-blue-300 font-bold text-sm">Ver Detalhes</button>
+                          <button onClick={() => handleDelete(c.id)} className="text-red-400 hover:text-red-300 text-sm">Excluir</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
