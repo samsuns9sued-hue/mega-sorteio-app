@@ -40,14 +40,14 @@ model User {
 model Contest {
   id           String        @id @default(cuid())
   number       Int           @unique
-  
-  // ATUALIZAÇÃO AQUI: Mudamos de (10, 2) para (20, 2)
-  prizeValue   Decimal       @db.Decimal(20, 2) 
-  
+  prizeValue   Decimal       @db.Decimal(20, 2)
   drawDate     DateTime
   status       ContestStatus @default(OPEN)
   drawnNumbers Int[]
-  maxNumbers   Int           @default(30)
+  
+  // ADICIONE ESTA LINHA:
+  maxNumbers   Int           @default(30) // Padrão 30 para compatibilidade
+
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
