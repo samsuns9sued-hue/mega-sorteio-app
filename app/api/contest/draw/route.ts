@@ -1,8 +1,33 @@
 // app/api/contest/draw/route.ts
 import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth"; // Importação necessária para segurança
 import { NextResponse } from "next/server";
 
 export async function POST() {
+  
+  // --- INÍCIO DA BLINDAGEM DE SEGURANÇA ---
+  // 1. Pega a sessão do usuário atual
+  const session = await getServerSession();
+  
+  // 2. Se não estiver logado, bloqueia
+  if (!session || !session.user?.name) {
+    return NextResponse.json({ message: "Não autorizado. Faça login." }, { status: 401 });
+  }
+
+  // 3. Busca o usuário no banco para conferir se é ADMIN de verdade
+  const userAdmin = await prisma.user.findUnique({
+    where: { username: session.user.name }
+  });
+
+  // 4. Se não for ADMIN, bloqueia com erro 403 (Proibido)
+  if (!userAdmin || userAdmin.role !== "ADMIN") {
+    console.warn(`Tentativa não autorizada de sorteio pelo usuário: ${session.user.name}`);
+    return NextResponse.json({ message: "Apenas administradores podem realizar sorteios." }, { status: 403 });
+  }
+  // --- FIM DA BLINDAGEM ---
+
+
+  // --- DAQUI PARA BAIXO É A SUA LÓGICA ORIGINAL (MANTIDA INTACTA) ---
   try {
     // 1. Busca o concurso aberto
     const contest = await prisma.contest.findFirst({
@@ -20,18 +45,17 @@ export async function POST() {
     }
     // Converte para array
     const finalNumbers = Array.from(drawnNumbers); 
-    // Nota: Mantemos a ordem de sorteio para a animação (não ordenamos ainda)
-
+    
     // 3. Atualiza o Concurso para "Finalizado"
     await prisma.contest.update({
       where: { id: contest.id },
       data: {
         status: "FINISHED",
-        drawnNumbers: finalNumbers, // Salva os números
+        drawnNumbers: finalNumbers, 
       },
     });
 
-    // 4. CONFERÊNCIA AUTOMÁTICA (O Pulo do Gato)
+    // 4. CONFERÊNCIA AUTOMÁTICA
     // Busca todas as apostas desse concurso
     const bets = await prisma.bet.findMany({
       where: { contestId: contest.id },
@@ -52,7 +76,7 @@ export async function POST() {
     // Executa todas as atualizações
     await prisma.$transaction(updates);
 
-    // 5. Retorna os números para o Frontend fazer a animação
+    // 5. Retorna os números
     return NextResponse.json({ drawnNumbers: finalNumbers });
 
   } catch (error) {
