@@ -1,33 +1,27 @@
 // app/api/contest/draw/route.ts
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth"; // Importação necessária para segurança
+import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
+import { randomInt } from "crypto"; // <--- A Mágica da Segurança
 
 export async function POST() {
   
-  // --- INÍCIO DA BLINDAGEM DE SEGURANÇA ---
-  // 1. Pega a sessão do usuário atual
+  // --- BLINDAGEM DE ACESSO (PERMANECE IGUAL) ---
   const session = await getServerSession();
   
-  // 2. Se não estiver logado, bloqueia
   if (!session || !session.user?.name) {
     return NextResponse.json({ message: "Não autorizado. Faça login." }, { status: 401 });
   }
 
-  // 3. Busca o usuário no banco para conferir se é ADMIN de verdade
   const userAdmin = await prisma.user.findUnique({
     where: { username: session.user.name }
   });
 
-  // 4. Se não for ADMIN, bloqueia com erro 403 (Proibido)
   if (!userAdmin || userAdmin.role !== "ADMIN") {
-    console.warn(`Tentativa não autorizada de sorteio pelo usuário: ${session.user.name}`);
+    console.warn(`Tentativa de fraude no sorteio IP/User: ${session.user.name}`);
     return NextResponse.json({ message: "Apenas administradores podem realizar sorteios." }, { status: 403 });
   }
-  // --- FIM DA BLINDAGEM ---
 
-
-  // --- DAQUI PARA BAIXO É A SUA LÓGICA ORIGINAL (MANTIDA INTACTA) ---
   try {
     // 1. Busca o concurso aberto
     const contest = await prisma.contest.findFirst({
@@ -35,17 +29,26 @@ export async function POST() {
     });
 
     if (!contest) {
-      return NextResponse.json({ message: "Não há concurso aberto." }, { status: 400 });
+      return NextResponse.json({ message: "Não há concurso aberto para sortear." }, { status: 400 });
     }
 
-    // 2. Gera 6 números aleatórios únicos (1 a 60)
+    // --- BLINDAGEM DE ALEATORIEDADE (CSPRNG) ---
+    // Usamos um Set para garantir que não haja números repetidos
     const drawnNumbers = new Set<number>();
+
+    // Loop de segurança: Continua gerando até ter 6 números únicos
+    // randomInt(min, max) é exclusivo no máximo, então usamos 1, 61 para gerar de 1 a 60.
     while (drawnNumbers.size < 6) {
-      drawnNumbers.add(Math.floor(Math.random() * 60) + 1);
+      const secureNumber = randomInt(1, 61); // Gera de 1 a 60 com entropia de hardware
+      drawnNumbers.add(secureNumber);
     }
+    
     // Converte para array
     const finalNumbers = Array.from(drawnNumbers); 
     
+    // Log de Auditoria no Servidor (Para você ver nos logs da Vercel quem sorteou e o que saiu)
+    console.log(`[AUDITORIA] Sorteio realizado por ${session.user.name}. Números: ${finalNumbers.join(', ')}`);
+
     // 3. Atualiza o Concurso para "Finalizado"
     await prisma.contest.update({
       where: { id: contest.id },
@@ -63,6 +66,7 @@ export async function POST() {
 
     // Para cada aposta, calcula os acertos
     const updates = bets.map((bet) => {
+      // Lógica de intersecção segura
       const hits = bet.selectedNumbers.filter((num) => 
         finalNumbers.includes(num)
       ).length;
@@ -73,14 +77,14 @@ export async function POST() {
       });
     });
 
-    // Executa todas as atualizações
+    // Executa todas as atualizações no banco
     await prisma.$transaction(updates);
 
     // 5. Retorna os números
     return NextResponse.json({ drawnNumbers: finalNumbers });
 
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ message: "Erro no sorteio." }, { status: 500 });
+    console.error("Erro crítico no sorteio:", error);
+    return NextResponse.json({ message: "Erro interno no servidor de sorteio." }, { status: 500 });
   }
 }
