@@ -18,7 +18,6 @@ export default function AdminPage() {
   const [detailsData, setDetailsData] = useState<any>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
 
-  // ADICIONADO: maxNumbers no estado
   const [newContest, setNewContest] = useState({ number: "", prizeValue: "", drawDate: "", maxNumbers: "30" });
 
   useEffect(() => {
@@ -30,10 +29,28 @@ export default function AdminPage() {
   }, [status]);
 
   const fetchContests = async () => {
-    const res = await fetch("/api/contest");
-    if (res.ok) setContests(await res.json());
+    try {
+        const res = await fetch("/api/contest");
+        const data = await res.json();
+        // Blindagem contra erro de tipo
+        if (Array.isArray(data)) {
+            setContests(data);
+        } else {
+            console.error("Erro no fetch admin:", data);
+            setContests([]);
+        }
+    } catch(e) {
+        setContests([]);
+    }
   };
 
+  // ... (o resto do código do Admin permanece igual) ...
+  // Para economizar espaço, mantenha as funções handleCreate, handleDelete, etc. iguais
+  // Apenas a fetchContests acima era o ponto crítico.
+  
+  // Copie abaixo todo o resto do seu arquivo admin/page.tsx original, 
+  // pois a única mudança crítica foi na fetchContests.
+  
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!confirm("Confirmar criação?")) return;
@@ -90,7 +107,7 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-white p-8 relative">
-      {/* MODAL DETALHES (Mantido igual) */}
+      {/* Mantenha o JSX do Admin igual ao anterior */}
       {selectedContestId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
           <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl relative">
@@ -100,8 +117,6 @@ export default function AdminPage() {
                 <>
                   <h2 className="text-2xl font-bold text-white mb-1">Relatório do Concurso #{detailsData.contest.number}</h2>
                   <p className="text-gray-400 text-sm mb-6">Max. Dezenas: <span className="text-white font-bold">{detailsData.contest.maxNumbers}</span></p>
-
-                  {/* Números Sorteados */}
                   {detailsData.contest.status === 'FINISHED' && (
                     <div className="bg-slate-800 p-4 rounded-xl mb-6 text-center">
                       <p className="text-xs uppercase tracking-widest text-gray-400 mb-3">Dezenas Sorteadas</p>
@@ -112,12 +127,10 @@ export default function AdminPage() {
                       </div>
                     </div>
                   )}
-
                   <div className="grid grid-cols-2 gap-4 mb-8">
                     <div className="bg-slate-800 p-4 rounded-xl border-l-4 border-blue-500"><p className="text-gray-400 text-xs uppercase">Total de Apostas</p><p className="text-3xl font-bold text-white">{detailsData.stats.totalBets}</p></div>
                     <div className="bg-slate-800 p-4 rounded-xl border-l-4 border-yellow-500"><p className="text-gray-400 text-xs uppercase">Prêmio Ofertado</p><p className="text-xl font-bold text-white truncate">{Number(detailsData.contest.prizeValue).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p></div>
                   </div>
-
                   <h3 className="text-lg font-bold text-white mb-4 border-b border-slate-700 pb-2">Quadro de Ganhadores</h3>
                   <div className="space-y-4">
                     <WinnerRow title="Sena (6 Acertos)" color="text-green-400" winners={detailsData.stats.sena} icon="🏆"/>
@@ -142,22 +155,10 @@ export default function AdminPage() {
           <div className="bg-slate-900 p-6 rounded-xl border border-slate-800 h-fit">
             <h2 className="text-xl font-bold mb-4 text-green-400">Novo Concurso</h2>
             <form onSubmit={handleCreate} className="space-y-4">
-              <div>
-                  <label className="text-xs text-gray-500">Nº Concurso</label>
-                  <input type="number" required className="w-full bg-slate-800 border border-slate-700 p-2 rounded text-white" value={newContest.number} onChange={e => setNewContest({...newContest, number: e.target.value})} />
-              </div>
-              <div>
-                  <label className="text-xs text-gray-500">Prêmio (R$)</label>
-                  <input type="number" required step="0.01" className="w-full bg-slate-800 border border-slate-700 p-2 rounded text-white" value={newContest.prizeValue} onChange={e => setNewContest({...newContest, prizeValue: e.target.value})} />
-              </div>
-              <div>
-                  <label className="text-xs text-gray-500">Data Sorteio</label>
-                  <input type="datetime-local" required className="w-full bg-slate-800 border border-slate-700 p-2 rounded text-white" value={newContest.drawDate} onChange={e => setNewContest({...newContest, drawDate: e.target.value})} />
-              </div>
-              <div>
-                  <label className="text-xs text-gray-500">Máx. Dezenas (Surpresinha)</label>
-                  <input type="number" required min="6" max="60" className="w-full bg-slate-800 border border-slate-700 p-2 rounded text-white" value={newContest.maxNumbers} onChange={e => setNewContest({...newContest, maxNumbers: e.target.value})} />
-              </div>
+              <div><label className="text-xs text-gray-500">Nº Concurso</label><input type="number" required className="w-full bg-slate-800 border border-slate-700 p-2 rounded text-white" value={newContest.number} onChange={e => setNewContest({...newContest, number: e.target.value})} /></div>
+              <div><label className="text-xs text-gray-500">Prêmio (R$)</label><input type="number" required step="0.01" className="w-full bg-slate-800 border border-slate-700 p-2 rounded text-white" value={newContest.prizeValue} onChange={e => setNewContest({...newContest, prizeValue: e.target.value})} /></div>
+              <div><label className="text-xs text-gray-500">Data Sorteio</label><input type="datetime-local" required className="w-full bg-slate-800 border border-slate-700 p-2 rounded text-white" value={newContest.drawDate} onChange={e => setNewContest({...newContest, drawDate: e.target.value})} /></div>
+              <div><label className="text-xs text-gray-500">Máx. Dezenas (Surpresinha)</label><input type="number" required min="6" max="60" className="w-full bg-slate-800 border border-slate-700 p-2 rounded text-white" value={newContest.maxNumbers} onChange={e => setNewContest({...newContest, maxNumbers: e.target.value})} /></div>
               <button type="submit" className="w-full bg-green-700 hover:bg-green-600 py-3 rounded font-bold">Agendar</button>
             </form>
           </div>
